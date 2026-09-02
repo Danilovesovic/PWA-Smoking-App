@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Smoke Tracker — Dnevnik, Troškovi i Postignuća</title>
+  <meta name="description" content="Jednostavna mobilna aplikacija za praćenje popušenih cigareta, troškova i postizanje zdravstvenih ciljeva.">
+  <meta name="theme-color" content="#07090e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SmokeTrack">
+  
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="./icons/icon-192.svg">
+  
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+  <!-- PWA Install Banner (Android Chrome) -->
+  <div id="pwa-install-banner" class="pwa-banner">
+    <span>📲 Instaliraj Smoke Tracker na telefon</span>
+    <button id="pwa-install-btn" class="pwa-banner-btn">Instaliraj</button>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <img src="./icons/icon-192.svg" alt="Smoke Tracker Logo" class="brand-icon">
+        <h1 class="brand-title">Smoke Tracker</h1>
+      </div>
+      <div class="header-status-badge">● Aktivno</div>
+    </header>
+
+    <!-- Main Dynamic Content Area -->
+    <main class="content-area">
+
+      <!-- ================= TAB 1: TRACKER / GLAVNI EKRAN ================= -->
+      <section id="tab-tracker" class="tab-content active">
+        
+        <!-- Live Timer Hero Card -->
+        <div class="timer-hero-card">
+          <div class="timer-label">Prošlo od poslednje cigarete</div>
+          <div id="timer-val" class="timer-display">00:00:00</div>
+          <div id="timer-subtext" class="timer-subtext">Pritisni SMOKE kada zapališ</div>
+
+          <!-- Next Milestone In-app Card -->
+          <div id="next-badge-info" class="next-badge-box">
+            <div class="next-badge-header">
+              <span>Sledeće postignuće:</span>
+              <span id="next-badge-title" class="next-badge-title">⚡ 1 Sat Pobede</span>
+            </div>
+            <div class="progress-track">
+              <div id="next-badge-bar" class="progress-bar-fill"></div>
+            </div>
+            <div style="text-align: right; margin-top: 4px;">
+              <span id="next-badge-time" style="font-size: 0.72rem; color: var(--text-secondary);">računanje...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Giant SMOKE Action Button -->
+        <div class="smoke-btn-container">
+          <div class="smoke-button-wrapper">
+            <div class="smoke-pulse-ring"></div>
+            <button id="smoke-action-btn" class="smoke-btn" aria-label="Zabeleži cigaretu">
+              <span class="smoke-btn-icon">🚬</span>
+              <span class="smoke-btn-label">SMOKE</span>
+              <span class="smoke-btn-hint">ZAPALIO SAM</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Today Quick Summary Cards -->
+        <div class="quick-stats-grid">
+          <div class="stat-box">
+            <span class="stat-box-title">Danas popušeno</span>
+            <span id="today-smoke-count" class="stat-box-val">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-title">Današnji trošak</span>
+            <span id="today-cost-val" class="stat-box-val">0 RSD</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= TAB 2: BEDŽEVI & TROFEJI ================= -->
+      <section id="tab-badges" class="tab-content">
+        <div class="section-header-box">
+          <h2 class="section-title">Trofeji & Postignuća</h2>
+          <span id="badges-unlocked-count" class="section-counter">0 / 0 Otključano</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">
+          Što duže izdržiš bez dima, to više zdravstvenih bedževa i benefita otključavaš!
+        </p>
+        <div id="badges-grid-container" class="badges-grid">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </section>
+
+      <!-- ================= TAB 3: DNEVNIK / ISTORIJA ================= -->
+      <section id="tab-logs" class="tab-content">
+        <div class="logs-top-actions">
+          <h2 class="section-title">Dnevnik Unosa</h2>
+          <button id="open-manual-log-btn" class="action-btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Dodaj ranije
+          </button>
+        </div>
+
+        <div id="logs-list-container">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </section>
+
+      <!-- ================= TAB 4: FINANSIJE & STATISTIKA ================= -->
+      <section id="tab-stats" class="tab-content">
+        <h2 class="section-title">Finansije i Statistika</h2>
+
+        <!-- Spent Box -->
+        <div class="finance-highlight-card">
+          <div class="finance-label">Ukupno potrošeno na cigarete</div>
+          <div class="finance-amount"><span id="stat-total-spent">0</span> <span class="currency-tag" style="font-size: 1.2rem; font-weight: 600;">RSD</span></div>
+        </div>
+
+        <div class="stats-breakdown-grid">
+          <div class="stat-box">
+            <span class="stat-box-title">Ukupno cigareta</span>
+            <span id="stat-total-cigs" class="stat-box-val">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-title">Dnevni prosek</span>
+            <span id="stat-daily-avg" class="stat-box-val">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-title">Prosečan trošak / dan</span>
+            <span id="stat-daily-cost" class="stat-box-val">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-title">Trošak zadnjih 7 dana</span>
+            <span class="stat-box-val"><span id="stat-week-spent">0</span> <small class="currency-tag" style="font-size: 0.8rem;"></small></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 5: PODEŠAVANJA ================= -->
+      <section id="tab-settings" class="tab-content">
+        <h2 class="section-title">Podešavanja</h2>
+
+        <form id="settings-form" class="settings-form">
+          <div class="setting-group">
+            <label class="setting-label" for="setting-pack-price">Cena jedne paklice</label>
+            <input type="number" id="setting-pack-price" class="setting-input" step="1" min="1" required>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="setting-currency">Valuta (RSD, EUR, USD, BAM...)</label>
+            <input type="text" id="setting-currency" class="setting-input" maxlength="6" required>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="setting-per-pack">Cigareta u jednoj paklici</label>
+            <input type="number" id="setting-per-pack" class="setting-input" min="1" max="100" required>
+          </div>
+
+          <div class="setting-toggle-row">
+            <div>
+              <div class="toggle-label">Zvučni efekti</div>
+              <div class="toggle-sub">Zvuk pri unosu i fanfare za postignuća</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-sound" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-toggle-row">
+            <div>
+              <div class="toggle-label">Haptička vibracija</div>
+              <div class="toggle-sub">Vibracija telefona na pritisak SMOKE dugmeta</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-haptic" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <button type="submit" id="save-settings-btn" class="btn-primary-block">Sačuvaj podešavanja</button>
+          <div id="settings-save-success" class="save-alert">✓ Podešavanja uspešno sačuvana!</div>
+        </form>
+
+        <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+          <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-secondary);">Rezervna kopija podataka</h3>
+          <button id="export-data-btn" class="action-btn-sm" style="width: 100%; justify-content: center; padding: 12px; background: #334155;">
+            💾 Preuzmi rezervnu kopiju (JSON)
+          </button>
+          
+          <label class="action-btn-sm" style="width: 100%; justify-content: center; padding: 12px; background: #1e293b; cursor: pointer; text-align: center;">
+            📂 Uvezi podatke iz fajla
+            <input type="file" id="import-file-input" accept=".json" style="display: none;">
+          </label>
+        </div>
+
+        <div class="danger-zone">
+          <button id="reset-data-btn" class="btn-danger-outline">Resetuj sve podatke i logove</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="tab-tracker">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Tracker</span>
+      </button>
+
+      <button class="nav-btn" data-tab="tab-badges">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+          <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+          <path d="M4 22h16"></path>
+          <path d="M10 14.66V17c0 .55-.45 1-1 1H7.83a2 2 0 0 1-1.42-.59L5 16"></path>
+          <path d="M14 14.66V17c0 .55.45 1 1 1h1.17c.53 0 1.04-.21 1.42-.59L19 16"></path>
+          <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+        </svg>
+        <span>Trofeji</span>
+      </button>
+
+      <button class="nav-btn" data-tab="tab-logs">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        <span>Dnevnik</span>
+      </button>
+
+      <button class="nav-btn" data-tab="tab-stats">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+        <span>Troškovi</span>
+      </button>
+
+      <button class="nav-btn" data-tab="tab-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Opcije</span>
+      </button>
+    </nav>
+
+    <!-- Undo Toast Notification Popup -->
+    <div id="undo-toast" class="undo-toast">
+      <div class="undo-toast-text">
+        <span>🚬 Cigareta zabeležena</span>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button id="undo-toast-btn" class="undo-toast-btn">PONIŠTI (UNDO)</button>
+        <button id="undo-toast-close" style="background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; padding: 2px;">×</button>
+      </div>
+    </div>
+
+    <!-- Achievement Celebration Modal -->
+    <div id="achievement-modal" class="modal-backdrop">
+      <div class="modal-sheet">
+        <div class="ach-celebrate-box">
+          <div id="ach-modal-icon" class="ach-celebrate-icon">🏆</div>
+          <div class="ach-celebrate-tag">Novo Postignuće Otključano!</div>
+          <h3 id="ach-modal-title" class="ach-celebrate-title">1 Sat Pobede</h3>
+          <div id="ach-modal-desc" class="ach-celebrate-desc">1 sat bez dima</div>
+          <div id="ach-modal-benefit" class="ach-celebrate-benefit">
+            Nivo nikotina u krvi počinje osetno da opada. Cirkulacija se ubrzava.
+          </div>
+          <button id="close-achievement-modal" class="btn-celebrate-close">SJAJNO, NASTAVI TAKO! 🚀</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual Entry Modal -->
+    <div id="manual-entry-modal" class="modal-backdrop">
+      <div class="modal-sheet" style="text-align: left;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff;">Dodaj unos ručno</h3>
+          <button id="close-manual-modal" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">×</button>
+        </div>
+        <form id="manual-log-form" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="setting-group">
+            <label class="setting-label" for="manual-datetime">Datum i vreme</label>
+            <input type="datetime-local" id="manual-datetime" class="setting-input" required>
+          </div>
+          <div class="setting-group">
+            <label class="setting-label" for="manual-note">Kratka beleška (opciono)</label>
+            <input type="text" id="manual-note" class="setting-input" placeholder="npr. Posle kafe, na poslu...">
+          </div>
+          <button type="submit" class="btn-primary-block">Sačuvaj unos</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
