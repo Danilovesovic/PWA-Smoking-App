@@ -1,23 +1,30 @@
 /**
- * Storage Manager for Smoke Tracker
- * Handles local persistence of logs, settings, and badge progress.
+ * Storage Manager for Quit Smoking Tracker
+ * Handles local persistence of quit date, savings settings, wishlist, and cravings.
  */
 
 const STORAGE_KEYS = {
-  LOGS: 'st_smoke_logs',
   SETTINGS: 'st_settings',
+  QUIT_TIME: 'st_quit_time',
   BADGES: 'st_unlocked_badges',
-  LAST_SMOKE: 'st_last_smoke_time'
+  WISHLIST: 'st_wishlist',
+  CRAVINGS: 'st_cravings_survived'
 };
 
 const DEFAULT_SETTINGS = {
-  packPrice: 420,       // Default price in RSD / EUR
+  packPrice: 450,       // Default pack price
   currency: 'RSD',      // 'RSD', 'EUR', 'USD', 'BAM'
-  perPack: 20,          // Cigarettes per pack
+  perPack: 20,          // Cigarettes in pack
+  dailyCigarettes: 20,  // Average smoked per day before quitting
   soundEnabled: true,   // Sound effects
-  hapticEnabled: true,  // Vibration
-  dailyTarget: 0        // Optional daily limit / goal
+  hapticEnabled: true   // Vibration
 };
+
+const DEFAULT_WISHLIST = [
+  { id: 'w_1', title: 'Opuštajuća večera', price: 3500, icon: '🍽️' },
+  { id: 'w_2', title: 'Nove patike za trčanje', price: 12000, icon: '👟' },
+  { id: 'w_3', title: 'Vikend putovanje', price: 30000, icon: '✈️' }
+];
 
 export const Storage = {
   getSettings() {
@@ -31,89 +38,80 @@ export const Storage = {
   },
 
   saveSettings(settings) {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    const current = this.getSettings();
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify({ ...current, ...settings }));
   },
 
-  getLogs() {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.LOGS);
-      return data ? JSON.parse(data) : [];
-    } catch (e) {
-      console.error('Error loading logs', e);
-      return [];
+  getQuitTime() {
+    const stored = localStorage.getItem(STORAGE_KEYS.QUIT_TIME);
+    if (stored) {
+      const parsed = parseInt(stored, 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
     }
-  },
 
-  saveLogs(logs) {
-    localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(logs));
-  },
-
-  addLog(customTimestamp = null, note = '') {
-    const logs = this.getLogs();
-    const now = customTimestamp ? new Date(customTimestamp) : new Date();
-    
-    const newEntry = {
-      id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-      timestamp: now.getTime(),
-      dateKey: this.getDateKey(now), // Format: YYYY-MM-DD
-      timeString: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      note: note
-    };
-
-    logs.unshift(newEntry);
-    this.saveLogs(logs);
-    
-    // Update last smoke timestamp
-    this.setLastSmokeTime(now.getTime());
-
-    return newEntry;
-  },
-
-  deleteLog(id) {
-    let logs = this.getLogs();
-    logs = logs.filter(item => item.id !== id);
-    this.saveLogs(logs);
-    
-    // Recalculate last smoke time
-    if (logs.length > 0) {
-      const maxTime = Math.max(...logs.map(l => l.timestamp));
-      this.setLastSmokeTime(maxTime);
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.LAST_SMOKE);
+    // Fallback: check legacy 'st_last_smoke_time'
+    const legacy = localStorage.getItem('st_last_smoke_time');
+    if (legacy) {
+      const legacyParsed = parseInt(legacy, 10);
+      if (!isNaN(legacyParsed) && legacyParsed > 0) {
+        this.setQuitTime(legacyParsed);
+        return legacyParsed;
+      }
     }
-    return logs;
+
+    // Default to current time if first time opening
+    const now = Date.now();
+    this.setQuitTime(now);
+    return now;
   },
 
-  undoLastLog() {
-    const logs = this.getLogs();
-    if (logs.length === 0) return null;
-    
-    const removed = logs.shift();
-    this.saveLogs(logs);
-    
-    if (logs.length > 0) {
-      this.setLastSmokeTime(logs[0].timestamp);
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.LAST_SMOKE);
-    }
-    return removed;
+  setQuitTime(timestamp) {
+    localStorage.setItem(STORAGE_KEYS.QUIT_TIME, timestamp.toString());
+    localStorage.setItem('st_last_smoke_time', timestamp.toString());
   },
 
-  getLastSmokeTime() {
-    const stored = localStorage.getItem(STORAGE_KEYS.LAST_SMOKE);
-    if (stored) return parseInt(stored, 10);
-
-    const logs = this.getLogs();
-    if (logs.length > 0) {
-      return logs[0].timestamp;
-    }
-    return null;
+  getDurationMs() {
+    const quit = this.getQuitTime();
+    return Math.max(0, Date.now() - quit);
   },
 
-  setLastSmokeTime(timestamp) {
-    localStorage.setItem(STORAGE_KEYS.LAST_SMOKE, timestamp.toString());
+  // Calculate cigarettes avoided based on duration and previous daily average
+  getCigarettesAvoided() {
+    const ms = this.getDurationMs();
+    const days = ms / (1000 * 60 * 60 * 24);
+    const settings = this.getSettings();
+    const daily = settings.dailyCigarettes || 20;
+    return days * daily;
   },
 
+  // Calculate money saved based on cigarettes avoided and pack price
+  getSavedMoney() {
+    const avoided = this.getCigarettesAvoided();
+    const settings = this.getSettings();
+    const pricePerCig = (settings.packPrice || 450) / (settings.perPack || 20);
+    return avoided * pricePerCig;
+  },
+
+  // Calculate life regained in minutes (~11 minutes saved per avoided cigarette)
+  getLifeRegainedMinutes() {
+    const avoided = this.getCigarettesAvoided();
+    return Math.round(avoided * 11);
+  },
+
+  // Cravings Survived
+  getCravingsCount() {
+    const val = localStorage.getItem(STORAGE_KEYS.CRAVINGS);
+    return val ? parseInt(val, 10) : 0;
+  },
+
+  incrementCravings() {
+    const current = this.getCravingsCount();
+    const updated = current + 1;
+    localStorage.setItem(STORAGE_KEYS.CRAVINGS, updated.toString());
+    return updated;
+  },
+
+  // Badges & Milestones
   getUnlockedBadges() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.BADGES);
@@ -131,54 +129,63 @@ export const Storage = {
         ...badgeData
       };
       localStorage.setItem(STORAGE_KEYS.BADGES, JSON.stringify(badges));
-      return true; // Newly unlocked
+      return true;
     }
-    return false; // Already unlocked
+    return false;
   },
 
-  getDateKey(dateObj) {
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  // Wishlist
+  getWishlist() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.WISHLIST);
+      return data ? JSON.parse(data) : DEFAULT_WISHLIST;
+    } catch (e) {
+      return DEFAULT_WISHLIST;
+    }
   },
 
-  getTodayLogs() {
-    const todayKey = this.getDateKey(new Date());
-    const logs = this.getLogs();
-    return logs.filter(l => l.dateKey === todayKey);
+  saveWishlist(list) {
+    localStorage.setItem(STORAGE_KEYS.WISHLIST, JSON.stringify(list));
   },
 
-  getLogsGroupedByDate() {
-    const logs = this.getLogs();
-    const grouped = {};
-    
-    logs.forEach(log => {
-      if (!grouped[log.dateKey]) {
-        grouped[log.dateKey] = [];
-      }
-      grouped[log.dateKey].push(log);
-    });
-
-    return grouped;
+  addWishlistItem(item) {
+    const list = this.getWishlist();
+    const newItem = {
+      id: 'w_' + Date.now(),
+      title: item.title,
+      price: parseFloat(item.price) || 1000,
+      icon: item.icon || '🎁'
+    };
+    list.push(newItem);
+    this.saveWishlist(list);
+    return newItem;
   },
 
+  deleteWishlistItem(id) {
+    let list = this.getWishlist();
+    list = list.filter(item => item.id !== id);
+    this.saveWishlist(list);
+    return list;
+  },
+
+  // Export / Import
   exportData() {
     return JSON.stringify({
-      version: 1,
+      version: 2,
       exportDate: new Date().toISOString(),
-      logs: this.getLogs(),
+      quitTime: this.getQuitTime(),
       settings: this.getSettings(),
       unlockedBadges: this.getUnlockedBadges(),
-      lastSmoke: this.getLastSmokeTime()
+      wishlist: this.getWishlist(),
+      cravingsSurvived: this.getCravingsCount()
     }, null, 2);
   },
 
   importData(jsonString) {
     try {
       const data = JSON.parse(jsonString);
-      if (data.logs && Array.isArray(data.logs)) {
-        this.saveLogs(data.logs);
+      if (data.quitTime) {
+        this.setQuitTime(data.quitTime);
       }
       if (data.settings) {
         this.saveSettings(data.settings);
@@ -186,8 +193,11 @@ export const Storage = {
       if (data.unlockedBadges) {
         localStorage.setItem(STORAGE_KEYS.BADGES, JSON.stringify(data.unlockedBadges));
       }
-      if (data.lastSmoke) {
-        this.setLastSmokeTime(data.lastSmoke);
+      if (data.wishlist && Array.isArray(data.wishlist)) {
+        this.saveWishlist(data.wishlist);
+      }
+      if (typeof data.cravingsSurvived === 'number') {
+        localStorage.setItem(STORAGE_KEYS.CRAVINGS, data.cravingsSurvived.toString());
       }
       return true;
     } catch (e) {
@@ -196,9 +206,11 @@ export const Storage = {
     }
   },
 
-  clearAllData() {
-    localStorage.removeItem(STORAGE_KEYS.LOGS);
+  resetAllData() {
     localStorage.removeItem(STORAGE_KEYS.BADGES);
-    localStorage.removeItem(STORAGE_KEYS.LAST_SMOKE);
+    localStorage.removeItem(STORAGE_KEYS.CRAVINGS);
+    localStorage.removeItem('st_smoke_logs');
+    // Set quit time to now
+    this.setQuitTime(Date.now());
   }
 };

@@ -1,183 +1,227 @@
 /**
- * Stats, Logs & Badges Room Rendering Logic
+ * Health Timeline & Finance / Wishlist Rendering Logic
  */
 
 import { Storage } from './storage.js';
-import { BADGE_DEFINITIONS } from './badges.js';
+import { BadgesManager, HEALTH_MILESTONES, BADGE_DEFINITIONS } from './badges.js';
 import { Sound } from './audio.js';
 
 export const StatsView = {
   renderAll() {
-    this.renderLogs();
-    this.renderBadgesRoom();
-    this.renderFinanceStats();
+    this.renderHealthTimeline();
+    this.renderFinanceAndWishlist();
   },
 
-  renderLogs() {
-    const container = document.getElementById('logs-list-container');
+  renderHealthTimeline() {
+    const container = document.getElementById('health-timeline-container');
+    const unlockedCounter = document.getElementById('health-milestones-unlocked-count');
     if (!container) return;
 
-    const grouped = Storage.getLogsGroupedByDate();
-    const dateKeys = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+    const milestones = BadgesManager.getAllMilestonesWithProgress();
+    const unlockedCount = milestones.filter(m => m.isUnlocked).length;
+    const totalCount = milestones.length;
 
-    if (dateKeys.length === 0) {
-      container.innerHTML = `
+    if (unlockedCounter) {
+      unlockedCounter.textContent = `${unlockedCount} / ${totalCount} Dostignuto`;
+    }
+
+    let html = '';
+
+    milestones.forEach(m => {
+      const isCompleted = m.isUnlocked || m.progressPercent >= 100;
+      const progress = isCompleted ? 100 : m.progressPercent;
+
+      let remainingStr = '';
+      if (!isCompleted) {
+        const remH = Math.floor(m.remainingMinutes / 60);
+        const remM = m.remainingMinutes % 60;
+        if (remH >= 24) {
+          const days = Math.floor(remH / 24);
+          const h = remH % 24;
+          remainingStr = `još ${days}d ${h}h`;
+        } else if (remH > 0) {
+          remainingStr = `još ${remH}h ${remM}m`;
+        } else {
+          remainingStr = `još ${remM}m`;
+        }
+      }
+
+      html += `
+        <div class="health-milestone-card ${isCompleted ? 'completed' : 'in-progress'}">
+          <div class="milestone-top-row">
+            <div class="milestone-icon-title">
+              <span class="milestone-icon">${m.icon}</span>
+              <div>
+                <h4 class="milestone-title">${m.title}</h4>
+                <span class="milestone-target">${m.shortDesc}</span>
+              </div>
+            </div>
+            <div class="milestone-status-badge ${isCompleted ? 'badge-done' : 'badge-active'}">
+              ${isCompleted ? '✓ Oporavljeno' : `${progress}%`}
+            </div>
+          </div>
+
+          <p class="milestone-benefit-text">${m.benefit}</p>
+
+          <div class="milestone-progress-wrap">
+            <div class="milestone-progress-bar" style="width: ${progress}%;"></div>
+          </div>
+
+          ${!isCompleted ? `
+            <div class="milestone-remaining-time">
+              <span>Napredak: ${progress}%</span>
+              <span>${remainingStr}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    });
+
+    // Also append Cravings Badges section
+    const cravingBadges = BADGE_DEFINITIONS.filter(b => b.category === 'craving');
+    const unlockedMap = Storage.getUnlockedBadges();
+    const cravingsCount = Storage.getCravingsCount();
+
+    html += `
+      <div class="cravings-section-header">
+        <h3 class="subsection-title">🛡️ Trofeji Snage Volje</h3>
+        <span class="subsection-subtitle">${cravingsCount} pobeđenih kriza</span>
+      </div>
+      <div class="cravings-badges-grid">
+    `;
+
+    cravingBadges.forEach(b => {
+      const isAchieved = !!unlockedMap[b.id] || cravingsCount >= b.targetCravings;
+      html += `
+        <div class="craving-badge-card ${isAchieved ? 'unlocked' : 'locked'}">
+          <span class="craving-badge-icon">${b.icon}</span>
+          <div class="craving-badge-name">${b.title}</div>
+          <div class="craving-badge-desc">${b.shortDesc}</div>
+          ${isAchieved ? '<span class="craving-check">✓ Osvojeno</span>' : `<span class="craving-lock">🔒 Cilj: ${b.targetCravings}</span>`}
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+
+    container.innerHTML = html;
+  },
+
+  renderFinanceAndWishlist() {
+    const settings = Storage.getSettings();
+    const savedMoney = Storage.getSavedMoney();
+    const avoidedCigs = Storage.getCigarettesAvoided();
+    const pricePerCig = (settings.packPrice || 450) / (settings.perPack || 20);
+    const dailyCost = (settings.dailyCigarettes || 20) * pricePerCig;
+
+    // Highlights
+    const totalSavedEl = document.getElementById('finance-total-saved');
+    const avoidedCigsEl = document.getElementById('finance-avoided-cigs');
+    const daySavedEl = document.getElementById('finance-day-rate');
+    const monthSavedEl = document.getElementById('finance-month-rate');
+    const yearSavedEl = document.getElementById('finance-year-rate');
+
+    if (totalSavedEl) totalSavedEl.textContent = `${Math.floor(savedMoney).toLocaleString()} ${settings.currency}`;
+    if (avoidedCigsEl) avoidedCigsEl.textContent = `${Math.floor(avoidedCigs).toLocaleString()}`;
+    if (daySavedEl) daySavedEl.textContent = `${Math.floor(dailyCost).toLocaleString()} ${settings.currency}`;
+    if (monthSavedEl) monthSavedEl.textContent = `${Math.floor(dailyCost * 30).toLocaleString()} ${settings.currency}`;
+    if (yearSavedEl) yearSavedEl.textContent = `${Math.floor(dailyCost * 365).toLocaleString()} ${settings.currency}`;
+
+    // Wishlist List
+    const wishlistContainer = document.getElementById('wishlist-items-container');
+    if (!wishlistContainer) return;
+
+    const wishlist = Storage.getWishlist();
+
+    if (wishlist.length === 0) {
+      wishlistContainer.innerHTML = `
         <div class="empty-state">
-          <div class="empty-icon">📝</div>
-          <div class="empty-title">Još uvek nema unosa</div>
-          <div class="empty-desc">Pritisni veliko "SMOKE" dugme na glavnom ekranu ili dodaj unos ručno.</div>
+          <div class="empty-icon">🎁</div>
+          <div class="empty-title">Tvoja lista želja je prazna</div>
+          <div class="empty-desc">Dodaj stvari koje želiš sebi da priuštiš od novca ušteđenog od cigareta!</div>
         </div>
       `;
       return;
     }
 
-    const todayKey = Storage.getDateKey(new Date());
-    const yesterdayObj = new Date();
-    yesterdayObj.setDate(yesterdayObj.getDate() - 1);
-    const yesterdayKey = Storage.getDateKey(yesterdayObj);
+    let itemsHtml = '';
 
-    let html = '';
+    wishlist.forEach(item => {
+      const isReached = savedMoney >= item.price;
+      const progressPercent = Math.min(100, Math.floor((savedMoney / item.price) * 100));
+      const remainingMoney = Math.max(0, item.price - savedMoney);
+      const daysLeft = dailyCost > 0 ? Math.ceil(remainingMoney / dailyCost) : 0;
 
-    dateKeys.forEach(dateKey => {
-      const logs = grouped[dateKey];
-      let dayTitle = dateKey;
-      if (dateKey === todayKey) dayTitle = 'Danas';
-      else if (dateKey === yesterdayKey) dayTitle = 'Juče';
-      else {
-        const d = new Date(dateKey + 'T00:00:00');
-        dayTitle = d.toLocaleDateString('sr-RS', { weekday: 'short', day: 'numeric', month: 'short' });
-      }
-
-      html += `
-        <div class="log-group-card">
-          <div class="log-group-header">
-            <span class="log-group-title">${dayTitle}</span>
-            <span class="log-group-badge">${logs.length} ${logs.length === 1 ? 'cigareta' : 'cigareta'}</span>
-          </div>
-          <div class="log-items-list">
-      `;
-
-      logs.forEach(log => {
-        html += `
-          <div class="log-item" data-id="${log.id}">
-            <div class="log-time-col">
-              <span class="log-bullet"></span>
-              <span class="log-time">${log.timeString || '—'}</span>
+      itemsHtml += `
+        <div class="wishlist-card ${isReached ? 'achieved' : ''}">
+          <div class="wishlist-card-header">
+            <div class="wishlist-title-box">
+              <span class="wishlist-icon">${item.icon || '🎁'}</span>
+              <div>
+                <h4 class="wishlist-title">${item.title}</h4>
+                <span class="wishlist-price">${item.price.toLocaleString()} ${settings.currency}</span>
+              </div>
             </div>
-            ${log.note ? `<div class="log-note">${log.note}</div>` : ''}
-            <button class="log-delete-btn" data-id="${log.id}" title="Obriši ovaj unos">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="delete-wish-btn" data-id="${item.id}" title="Ukloni sa liste">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
           </div>
-        `;
-      });
 
-      html += `
+          <div class="wishlist-progress-track">
+            <div class="wishlist-progress-fill" style="width: ${progressPercent}%;"></div>
+          </div>
+
+          <div class="wishlist-footer">
+            ${isReached ? `
+              <span class="wishlist-unlocked-tag">🎉 Možeš kupiti odmah!</span>
+              <span class="wishlist-progress-pct">100%</span>
+            ` : `
+              <span class="wishlist-days-left">Još ${Math.floor(remainingMoney).toLocaleString()} ${settings.currency} (~${daysLeft} ${daysLeft === 1 ? 'dan' : 'dana'})</span>
+              <span class="wishlist-progress-pct">${progressPercent}%</span>
+            `}
           </div>
         </div>
       `;
     });
 
-    container.innerHTML = html;
+    wishlistContainer.innerHTML = itemsHtml;
 
     // Bind delete buttons
-    container.querySelectorAll('.log-delete-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    wishlistContainer.querySelectorAll('.delete-wish-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
         if (id) {
-          Storage.deleteLog(id);
-          Sound.playUndo();
-          this.renderAll();
-          window.dispatchEvent(new CustomEvent('smoke_logged'));
+          Storage.deleteWishlistItem(id);
+          this.renderFinanceAndWishlist();
         }
       });
     });
   },
 
-  renderBadgesRoom() {
-    const container = document.getElementById('badges-grid-container');
-    const badgeStatsHeader = document.getElementById('badges-unlocked-count');
-    if (!container) return;
+  setupWishlistForm() {
+    const form = document.getElementById('add-wish-form');
+    const titleInput = document.getElementById('wish-title-input');
+    const priceInput = document.getElementById('wish-price-input');
+    const iconInput = document.getElementById('wish-icon-select');
 
-    const unlockedMap = Storage.getUnlockedBadges();
-    const unlockedCount = Object.keys(unlockedMap).length;
-    const totalCount = BADGE_DEFINITIONS.length;
+    if (!form || !titleInput || !priceInput) return;
 
-    if (badgeStatsHeader) {
-      badgeStatsHeader.textContent = `${unlockedCount} / ${totalCount} Otključano`;
-    }
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = titleInput.value.trim();
+      const price = parseFloat(priceInput.value);
+      const icon = iconInput ? iconInput.value : '🎁';
 
-    let html = '';
-
-    BADGE_DEFINITIONS.forEach(badge => {
-      const isUnlocked = !!unlockedMap[badge.id];
-      const unlockedInfo = unlockedMap[badge.id];
-
-      let unlockedTimeStr = '';
-      if (isUnlocked && unlockedInfo && unlockedInfo.unlockedAt) {
-        const d = new Date(unlockedInfo.unlockedAt);
-        unlockedTimeStr = `Osvojeno: ${d.toLocaleDateString([], { day: 'numeric', month: 'short' })}`;
+      if (title && !isNaN(price) && price > 0) {
+        Storage.addWishlistItem({ title, price, icon });
+        titleInput.value = '';
+        priceInput.value = '';
+        this.renderFinanceAndWishlist();
+        Sound.playClick();
       }
-
-      html += `
-        <div class="badge-card ${isUnlocked ? 'unlocked' : 'locked'}">
-          <div class="badge-icon-box">
-            <span class="badge-emoji">${badge.icon}</span>
-            ${isUnlocked ? '<span class="badge-check-tag">✓</span>' : '<span class="badge-lock-tag">🔒</span>'}
-          </div>
-          <div class="badge-content">
-            <h4 class="badge-name">${badge.title}</h4>
-            <div class="badge-target">${badge.shortDesc}</div>
-            <p class="badge-benefit">${badge.healthBenefit}</p>
-            ${unlockedTimeStr ? `<div class="badge-date">${unlockedTimeStr}</div>` : ''}
-          </div>
-        </div>
-      `;
-    });
-
-    container.innerHTML = html;
-  },
-
-  renderFinanceStats() {
-    const settings = Storage.getSettings();
-    const logs = Storage.getLogs();
-    const grouped = Storage.getLogsGroupedByDate();
-    const pricePerCig = (settings.packPrice || 420) / (settings.perPack || 20);
-
-    const totalCigs = logs.length;
-    const totalSpent = (totalCigs * pricePerCig).toFixed(0);
-
-    // Days count
-    const daysCount = Math.max(1, Object.keys(grouped).length);
-    const dailyAvg = (totalCigs / daysCount).toFixed(1);
-    const dailyAvgCost = (dailyAvg * pricePerCig).toFixed(0);
-
-    // This week calculation (last 7 days)
-    const now = new Date();
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(now.getDate() - 7);
-    const weekLogs = logs.filter(l => l.timestamp >= sevenDaysAgo.getTime());
-    const weekSpent = (weekLogs.length * pricePerCig).toFixed(0);
-
-    // Update DOM elements
-    const totalSpentEl = document.getElementById('stat-total-spent');
-    const totalCigsEl = document.getElementById('stat-total-cigs');
-    const dailyAvgEl = document.getElementById('stat-daily-avg');
-    const dailyCostEl = document.getElementById('stat-daily-cost');
-    const weekSpentEl = document.getElementById('stat-week-spent');
-    const currencyTags = document.querySelectorAll('.currency-tag');
-
-    if (totalSpentEl) totalSpentEl.textContent = `${totalSpent}`;
-    if (totalCigsEl) totalCigsEl.textContent = `${totalCigs}`;
-    if (dailyAvgEl) dailyAvgEl.textContent = `${dailyAvg} cig/dan`;
-    if (dailyCostEl) dailyCostEl.textContent = `${dailyAvgCost} ${settings.currency}/dan`;
-    if (weekSpentEl) weekSpentEl.textContent = `${weekSpent}`;
-
-    currencyTags.forEach(el => {
-      el.textContent = settings.currency;
     });
   }
 };

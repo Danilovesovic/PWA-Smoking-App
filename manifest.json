@@ -1,12 +1,12 @@
 {
-  "name": "Smoke Tracker",
-  "short_name": "SmokeTrack",
-  "description": "Jednostavno praćenje pušenja, troškova i postignuća",
+  "name": "Smoke Free — Prestanak Pušenja",
+  "short_name": "SmokeFree",
+  "description": "Praćenje prestanka pušenja, regeneracije tela, ušteđenog novca i SOS podrška",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0a0d14",
-  "theme_color": "#0a0d14",
+  "background_color": "#07090e",
+  "theme_color": "#07090e",
   "icons": [
     {
       "src": "icons/icon-192.svg",

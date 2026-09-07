@@ -1,226 +1,215 @@
 /**
- * Badges & Achievements System
- * Evaluates milestones, triggers notifications, sounds, and confetti.
+ * Badges & Health Recovery System (Quit Smoking Edition)
+ * Evaluates biological milestones based on WHO recovery timeline, savings, and cravings survived.
  */
 
 import { Storage } from './storage.js';
 import { Sound } from './audio.js';
 import { fireConfetti } from './confetti.js';
 
-export const BADGE_DEFINITIONS = [
-  // --- Time-based Milestones (Hours/Days without smoke) ---
+export const HEALTH_MILESTONES = [
   {
     id: 'time_20m',
     title: 'Prvih 20 Minuta',
-    category: 'time',
     targetMinutes: 20,
     icon: '🫀',
     shortDesc: '20 min bez dima',
-    healthBenefit: 'Otkucaji srca i krvni pritisak počinju da se vraćaju u normalne vrednosti.',
-    rewardPoints: 50
+    benefit: 'Otkucaji srca i krvni pritisak počinju da se vraćaju u normalne vrednosti.'
   },
   {
     id: 'time_1h',
     title: '1 Sat Pobede',
-    category: 'time',
     targetMinutes: 60,
     icon: '⚡',
     shortDesc: '1 sat bez dima',
-    healthBenefit: 'Nivo nikotina u krvi počinje osetno da opada. Cirkulacija se ubrzava.',
-    rewardPoints: 100
+    benefit: 'Nivo nikotina u krvi počinje osetno da opada. Cirkulacija se ubrzava.'
   },
   {
     id: 'time_2h',
     title: '2 Sata Discipline',
-    category: 'time',
     targetMinutes: 120,
     icon: '🛡️',
     shortDesc: '2 sata bez dima',
-    healthBenefit: 'Telo počinje da se adaptira, prsti i stopala postaju topliji.',
-    rewardPoints: 150
+    benefit: 'Periferna cirkulacija se popravlja, prsti na rukama i nogama postaju topliji.'
   },
   {
     id: 'time_4h',
-    title: '4 Sata Snage',
-    category: 'time',
+    title: '4 Sata Čistoće',
     targetMinutes: 240,
     icon: '💪',
     shortDesc: '4 sata bez dima',
-    healthBenefit: 'Cirkulacija u celom telu se značajno popravlja.',
-    rewardPoints: 200
-  },
-  {
-    id: 'time_6h',
-    title: '6 Sati: Čistija Pluća',
-    category: 'time',
-    targetMinutes: 360,
-    icon: '🫁',
-    shortDesc: '6 sati bez dima',
-    healthBenefit: 'Srčani ritam je stabilan, a pluća počinju proces izbacivanja sluzi.',
-    rewardPoints: 300
+    benefit: 'Srčani ritam je stabilan, a nivo stresa u kardiovaskularnom sistemu opada.'
   },
   {
     id: 'time_8h',
     title: '8 Sati: Kiseonik Raste',
-    category: 'time',
     targetMinutes: 480,
     icon: '🌊',
     shortDesc: '8 sati bez dima',
-    healthBenefit: 'Nivo ugljen-monoksida u krvi opada za 50%, a nivo kiseonika dostiže normalu.',
-    rewardPoints: 400
+    benefit: 'Nivo ugljen-monoksida u krvi opada za 50%, a nivo kiseonika u ćelijama dostiže normalu.'
   },
   {
     id: 'time_12h',
     title: '12 Sati: Čista Krv',
-    category: 'time',
     targetMinutes: 720,
     icon: '🩸',
     shortDesc: '12 sati bez dima',
-    healthBenefit: 'Ugljen-monoksid u krvi je pao na potpuno normalan nivo. Organi dišu!',
-    rewardPoints: 500
+    benefit: 'Ugljen-monoksid u krvi pao je na potpuno normalan nivo. Svi organi napokon slobodno dišu!'
   },
   {
     id: 'time_24h',
     title: '24 Sata: Heroj Dana!',
-    category: 'time',
     targetMinutes: 1440,
     icon: '🏆',
     shortDesc: '1 ceo dan bez dima',
-    healthBenefit: 'Rizik od srčanog udara počinje naglo da opada već nakon prvog dana.',
-    rewardPoints: 1000
-  },
-  {
-    id: 'time_36h',
-    title: '36 Sati Čelika',
-    category: 'time',
-    targetMinutes: 2160,
-    icon: '🔥',
-    shortDesc: '36 sati bez dima',
-    healthBenefit: 'Telo je uspešno eliminisalo većinu direktnih otrova iz krvotoka.',
-    rewardPoints: 1200
+    benefit: 'Rizik od naglog srčanog udara počinje merljivo da opada već nakon prvih 24 časa.'
   },
   {
     id: 'time_48h',
     title: '48 Sati: Povratak Čula',
-    category: 'time',
     targetMinutes: 2880,
     icon: '🍎',
     shortDesc: '2 dana bez dima',
-    healthBenefit: 'Nervni završeci se obnavljaju! Čula ukusa i mirisa postaju znatno izoštrenija.',
-    rewardPoints: 1500
+    benefit: 'Nervni završeci počinju da se obnavljaju! Čula ukusa i mirisa postaju znatno izoštrenija.'
   },
   {
     id: 'time_72h',
-    title: '72 Sata: Nikotin Nestao!',
-    category: 'time',
+    title: '72 Sata: 100% Bez Nikotina!',
     targetMinutes: 4320,
     icon: '🌟',
     shortDesc: '3 dana bez dima',
-    healthBenefit: '100% nikotina je napustilo tvoj organizam! Disanje je primetno lakše.',
-    rewardPoints: 2000
+    benefit: 'Sav nikotin je napustio tvoj organizam! Bronhijalne cevi se opuštaju, energija raste.'
   },
   {
     id: 'time_5d',
     title: '5 Dana Slobode',
-    category: 'time',
     targetMinutes: 7200,
     icon: '🚀',
     shortDesc: '5 dana bez dima',
-    healthBenefit: 'Bronhijalne cevi u plućima se opuštaju, a nivo opšte fizičke energije raste.',
-    rewardPoints: 2500
+    benefit: 'Disanje je primetno lakše, a jutarnje buđenje prolazi bez težine u grudima.'
   },
   {
     id: 'time_7d',
     title: '7 Dana: Šampion Nedelje!',
-    category: 'time',
     targetMinutes: 10080,
     icon: '👑',
     shortDesc: '1 nedelja bez dima',
-    healthBenefit: 'Prebrođena najteža fizička faza. Psihološka zavisnost ubrzano slabi.',
-    rewardPoints: 3500
+    benefit: 'Prebrođena najteža fizička faza odvikavanja! Psihološka zavisnost ubrzano slabi.'
   },
   {
     id: 'time_14d',
     title: '2 Nedelje Čistote',
-    category: 'time',
     targetMinutes: 20160,
     icon: '💎',
     shortDesc: '2 nedelje bez dima',
-    healthBenefit: 'Kapacitet pluća je porastao i do 30%. Hodanje i trčanje su znatno lakši.',
-    rewardPoints: 5000
+    benefit: 'Cirkulacija i kapacitet pluća su porasli i do 30%. Hodanje uz stepenice je lakše nego ikad.'
   },
   {
     id: 'time_30d',
     title: '1 Mesec: Nova Osoba!',
-    category: 'time',
     targetMinutes: 43200,
     icon: '🏅',
     shortDesc: '1 mesec bez dima',
-    healthBenefit: 'Cilije u plućima su potpuno obnovljene. Rizik od infekcija je višestruko manji!',
-    rewardPoints: 10000
+    benefit: 'Treplje (cilije) u plućima su obnovljene. Kašalj i zapaljenski procesi se drastično smanjuju.'
   },
+  {
+    id: 'time_90d',
+    title: '3 Meseca: Čelična Pluća',
+    targetMinutes: 129600,
+    icon: '🫁',
+    shortDesc: '3 meseca bez dima',
+    benefit: 'Plućna funkcija je drastično unapređena. Krvotok u celom telu funkcioniše besprekorno.'
+  },
+  {
+    id: 'time_180d',
+    title: '6 Meseci: Mir i Snaga',
+    targetMinutes: 259200,
+    icon: '🧘',
+    shortDesc: '6 meseci bez dima',
+    benefit: 'Nivo stresa i anksioznosti je znatno niži nego u periodu dok si konzumirao cigarete.'
+  },
+  {
+    id: 'time_365d',
+    title: '1 Godina: Prepolovljen Rizik!',
+    targetMinutes: 525600,
+    icon: '❤️',
+    shortDesc: '1 cela godina slobode',
+    benefit: 'Rizik od koronarne bolesti srca je tačno 50% manji u odnosu na aktivnog pušača!'
+  },
+  {
+    id: 'time_1825d',
+    title: '5 Godina: Trijumf!',
+    targetMinutes: 2628000,
+    icon: '🌟',
+    shortDesc: '5 godina bez dima',
+    benefit: 'Rizik od moždanog udara je izjednačen sa osobom koja nikada u životu nije pušila.'
+  }
+];
 
-  // --- Habit and Control Badges ---
+export const BADGE_DEFINITIONS = [
+  ...HEALTH_MILESTONES.map(m => ({
+    ...m,
+    category: 'health',
+    healthBenefit: m.benefit
+  })),
+
+  // Cravings badges
   {
-    id: 'first_log',
-    title: 'Preuzeta Kontrola',
-    category: 'habit',
-    icon: '🎯',
-    shortDesc: 'Zabeležena prva cigareta',
-    healthBenefit: 'Prvi i najvažniji korak je svesnost o navici i njeno beleženje.',
-    rewardPoints: 50
+    id: 'craving_1',
+    title: 'Čelična Volja',
+    category: 'craving',
+    targetCravings: 1,
+    icon: '🛡️',
+    shortDesc: 'Prebrođena prva kriza',
+    healthBenefit: 'Dokazao si sebi da kriza traje par minuta i da je jača tvoja volja!'
   },
   {
-    id: 'under_5_today',
-    title: 'Minimalac (< 5 danas)',
-    category: 'habit',
-    icon: '✨',
-    shortDesc: 'Manje od 5 cigareta za ceo dan',
-    healthBenefit: 'Odlična kontrola i drastično manji unos katrana.',
-    rewardPoints: 300
+    id: 'craving_5',
+    title: 'Gospodar Želje',
+    category: 'craving',
+    targetCravings: 5,
+    icon: '🥊',
+    shortDesc: '5 prebrođenih kriza',
+    healthBenefit: 'Svaka pobeđena kriza trajno slabi refleks pušenja u mozgu.'
   },
   {
-    id: 'reduction_day',
-    title: 'Trend Pada',
-    category: 'habit',
-    icon: '📉',
-    shortDesc: 'Manje cigareta nego juče',
-    healthBenefit: 'Svaki dan sa manje cigareta pruža telu priliku za brži oporavak.',
-    rewardPoints: 200
+    id: 'craving_10',
+    title: 'Nesalomiv',
+    category: 'craving',
+    targetCravings: 10,
+    icon: '🥋',
+    shortDesc: '10 pobeđenih kriza',
+    healthBenefit: 'Naučio si svoje telo i um da funkcionišu potpuno autonomno i slobodno.'
   }
 ];
 
 export const BadgesManager = {
-  // Check and evaluate all badges based on current state
   checkAchievements() {
-    const lastSmoke = Storage.getLastSmokeTime();
-    const logs = Storage.getLogs();
-    const settings = Storage.getSettings();
+    const durationMs = Storage.getDurationMs();
+    const minutesSinceQuit = Math.floor(durationMs / (1000 * 60));
+    const cravingsCount = Storage.getCravingsCount();
     const unlocked = Storage.getUnlockedBadges();
 
     const newlyUnlocked = [];
 
-    // 1. Habit: First log
-    if (logs.length > 0 && !unlocked['first_log']) {
-      if (Storage.saveUnlockedBadge('first_log')) {
-        newlyUnlocked.push(this.getBadgeById('first_log'));
-      }
-    }
-
-    // 2. Time-based badges
-    if (lastSmoke) {
-      const minutesSinceLast = Math.floor((Date.now() - lastSmoke) / (1000 * 60));
-
-      BADGE_DEFINITIONS.filter(b => b.category === 'time').forEach(badge => {
-        if (minutesSinceLast >= badge.targetMinutes && !unlocked[badge.id]) {
-          if (Storage.saveUnlockedBadge(badge.id, { minutesAchieved: minutesSinceLast })) {
-            newlyUnlocked.push(badge);
-          }
+    // Health / Time milestones
+    HEALTH_MILESTONES.forEach(m => {
+      if (minutesSinceQuit >= m.targetMinutes && !unlocked[m.id]) {
+        if (Storage.saveUnlockedBadge(m.id, { minutesAchieved: minutesSinceQuit })) {
+          newlyUnlocked.push({ ...m, healthBenefit: m.benefit });
         }
-      });
-    }
+      }
+    });
 
-    // Trigger celebration for each newly unlocked badge
+    // Craving milestones
+    BADGE_DEFINITIONS.filter(b => b.category === 'craving').forEach(b => {
+      if (cravingsCount >= b.targetCravings && !unlocked[b.id]) {
+        if (Storage.saveUnlockedBadge(b.id, { cravingsAchieved: cravingsCount })) {
+          newlyUnlocked.push(b);
+        }
+      }
+    });
+
     if (newlyUnlocked.length > 0) {
       this.celebrateNewBadges(newlyUnlocked);
     }
@@ -228,32 +217,42 @@ export const BadgesManager = {
     return newlyUnlocked;
   },
 
-  getBadgeById(id) {
-    return BADGE_DEFINITIONS.find(b => b.id === id);
-  },
-
   getNextMilestone() {
-    const lastSmoke = Storage.getLastSmokeTime();
-    if (!lastSmoke) {
-      return BADGE_DEFINITIONS.find(b => b.id === 'time_20m');
-    }
+    const durationMs = Storage.getDurationMs();
+    const minutesSinceQuit = Math.floor(durationMs / (1000 * 60));
 
-    const minutesSinceLast = Math.floor((Date.now() - lastSmoke) / (1000 * 60));
-    const timeBadges = BADGE_DEFINITIONS.filter(b => b.category === 'time');
-
-    for (const badge of timeBadges) {
-      if (minutesSinceLast < badge.targetMinutes) {
-        const remainingMinutes = badge.targetMinutes - minutesSinceLast;
-        const progressPercent = Math.min(100, Math.floor((minutesSinceLast / badge.targetMinutes) * 100));
+    for (const milestone of HEALTH_MILESTONES) {
+      if (minutesSinceQuit < milestone.targetMinutes) {
+        const remainingMinutes = milestone.targetMinutes - minutesSinceQuit;
+        const progressPercent = Math.min(100, Math.floor((minutesSinceQuit / milestone.targetMinutes) * 100));
         return {
-          ...badge,
+          ...milestone,
           remainingMinutes,
           progressPercent
         };
       }
     }
 
-    return null; // All completed!
+    return null; // All completed
+  },
+
+  getAllMilestonesWithProgress() {
+    const durationMs = Storage.getDurationMs();
+    const minutesSinceQuit = Math.floor(durationMs / (1000 * 60));
+    const unlockedMap = Storage.getUnlockedBadges();
+
+    return HEALTH_MILESTONES.map(m => {
+      const isUnlocked = !!unlockedMap[m.id] || minutesSinceQuit >= m.targetMinutes;
+      const progressPercent = isUnlocked ? 100 : Math.min(99, Math.max(0, Math.floor((minutesSinceQuit / m.targetMinutes) * 100)));
+      const remainingMinutes = Math.max(0, m.targetMinutes - minutesSinceQuit);
+
+      return {
+        ...m,
+        isUnlocked,
+        progressPercent,
+        remainingMinutes
+      };
+    });
   },
 
   celebrateNewBadges(badges) {
@@ -266,7 +265,6 @@ export const BadgesManager = {
     }
     fireConfetti(3500);
 
-    // Show celebratory modal for the first one, or queue them
     badges.forEach((badge, idx) => {
       setTimeout(() => {
         this.showAchievementModal(badge);
@@ -286,7 +284,7 @@ export const BadgesManager = {
     if (iconEl) iconEl.textContent = badge.icon;
     if (titleEl) titleEl.textContent = badge.title;
     if (descEl) descEl.textContent = badge.shortDesc;
-    if (benefitEl) benefitEl.textContent = badge.healthBenefit;
+    if (benefitEl) benefitEl.textContent = badge.healthBenefit || badge.benefit;
 
     modal.classList.add('active');
   }

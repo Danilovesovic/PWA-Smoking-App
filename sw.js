@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smoke-tracker-v1';
+const CACHE_NAME = 'smokefree-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

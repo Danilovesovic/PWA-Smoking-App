@@ -1,5 +1,5 @@
 /**
- * Main Application Orchestrator
+ * Main Application Orchestrator (Quit Smoking Edition)
  */
 
 import { Storage } from './storage.js';
@@ -22,8 +22,8 @@ function initApp() {
   // 3. Setup Settings Form
   setupSettings();
 
-  // 4. Setup Manual Log Modal
-  setupManualLogModal();
+  // 4. Setup Wishlist Form
+  StatsView.setupWishlistForm();
 
   // 5. Setup Achievement Modal Close
   setupAchievementModal();
@@ -34,13 +34,13 @@ function initApp() {
   // 7. Register Service Worker & PWA Install
   setupPWA();
 
-  // 8. Listen to custom updates
-  window.addEventListener('smoke_logged', () => {
+  // 8. Custom update events
+  window.addEventListener('stats_updated', () => {
     Tracker.updateUI();
     StatsView.renderAll();
   });
 
-  // Initial render of stats/badges
+  // Initial render of Health and Finance/Wishlist
   StatsView.renderAll();
 }
 
@@ -60,7 +60,7 @@ function setupNavigation() {
       if (targetEl) {
         targetEl.classList.add('active');
         // Refresh views on tab open
-        if (targetTab === 'tab-badges' || targetTab === 'tab-logs' || targetTab === 'tab-stats') {
+        if (targetTab === 'tab-health' || targetTab === 'tab-finance') {
           StatsView.renderAll();
         }
       }
@@ -70,17 +70,33 @@ function setupNavigation() {
 
 function setupSettings() {
   const form = document.getElementById('settings-form');
+  const quitInput = document.getElementById('setting-quit-datetime');
+  const setNowBtn = document.getElementById('setting-set-now-btn');
+  const dailyCigsInput = document.getElementById('setting-daily-cigs');
   const priceInput = document.getElementById('setting-pack-price');
   const currencyInput = document.getElementById('setting-currency');
   const perPackInput = document.getElementById('setting-per-pack');
   const soundToggle = document.getElementById('setting-sound');
   const hapticToggle = document.getElementById('setting-haptic');
-  const saveBtn = document.getElementById('save-settings-btn');
   const saveMsg = document.getElementById('settings-save-success');
+  const resetAllBtn = document.getElementById('reset-data-btn');
 
   // Load current values
   const current = Storage.getSettings();
-  if (priceInput) priceInput.value = current.packPrice || 420;
+  const currentQuit = Storage.getQuitTime();
+
+  if (quitInput) {
+    quitInput.value = Tracker.toLocalISOString(new Date(currentQuit));
+  }
+
+  if (setNowBtn) {
+    setNowBtn.addEventListener('click', () => {
+      if (quitInput) quitInput.value = Tracker.toLocalISOString(new Date());
+    });
+  }
+
+  if (dailyCigsInput) dailyCigsInput.value = current.dailyCigarettes || 20;
+  if (priceInput) priceInput.value = current.packPrice || 450;
   if (currencyInput) currencyInput.value = current.currency || 'RSD';
   if (perPackInput) perPackInput.value = current.perPack || 20;
   if (soundToggle) soundToggle.checked = current.soundEnabled !== false;
@@ -89,8 +105,17 @@ function setupSettings() {
   if (form) {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
+
+      if (quitInput && quitInput.value) {
+        const parsedDate = new Date(quitInput.value);
+        if (!isNaN(parsedDate.getTime())) {
+          Storage.setQuitTime(parsedDate.getTime());
+        }
+      }
+
       const updated = {
-        packPrice: parseFloat(priceInput.value) || 420,
+        dailyCigarettes: parseInt(dailyCigsInput.value, 10) || 20,
+        packPrice: parseFloat(priceInput.value) || 450,
         currency: currencyInput.value.trim() || 'RSD',
         perPack: parseInt(perPackInput.value, 10) || 20,
         soundEnabled: soundToggle.checked,
@@ -98,56 +123,29 @@ function setupSettings() {
       };
 
       Storage.saveSettings(updated);
-      Tracker.updateUI();
-      StatsView.renderAll();
 
       if (saveMsg) {
-        saveMsg.classList.add('show');
-        setTimeout(() => saveMsg.classList.remove('show'), 2500);
+        saveMsg.classList.add('visible');
+        setTimeout(() => saveMsg.classList.remove('visible'), 2800);
       }
-    });
-  }
-}
 
-function setupManualLogModal() {
-  const modal = document.getElementById('manual-entry-modal');
-  const openBtn = document.getElementById('open-manual-log-btn');
-  const closeBtn = document.getElementById('close-manual-modal');
-  const form = document.getElementById('manual-log-form');
-  const timeInput = document.getElementById('manual-datetime');
+      if (updated.soundEnabled) Sound.playClick();
+      if (updated.hapticEnabled) Sound.triggerHaptic('light');
 
-  if (openBtn && modal) {
-    openBtn.addEventListener('click', () => {
-      // Set default to current local time formatted for datetime-local
-      const now = new Date();
-      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-      if (timeInput) timeInput.value = now.toISOString().slice(0, 16);
-      modal.classList.add('active');
-    });
-  }
-
-  if (closeBtn && modal) {
-    closeBtn.addEventListener('click', () => {
-      modal.classList.remove('active');
-    });
-  }
-
-  if (form && modal) {
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const dtValue = timeInput ? timeInput.value : null;
-      const noteInput = document.getElementById('manual-note');
-      const note = noteInput ? noteInput.value.trim() : '';
-
-      const timestamp = dtValue ? new Date(dtValue).getTime() : Date.now();
-      Storage.addLog(timestamp, note);
-      
-      modal.classList.remove('active');
-      if (noteInput) noteInput.value = '';
-      
       Tracker.updateUI();
       StatsView.renderAll();
-      BadgesManager.checkAchievements();
+    });
+  }
+
+  if (resetAllBtn) {
+    resetAllBtn.addEventListener('click', () => {
+      if (confirm('Da li si siguran da želiš da resetuješ sve podatke i kreneš ispočetka?')) {
+        Storage.resetAllData();
+        if (quitInput) quitInput.value = Tracker.toLocalISOString(new Date());
+        Tracker.updateUI();
+        StatsView.renderAll();
+        alert('Podaci su uspešno resetovani. Nova pobeda kreće od sada!');
+      }
     });
   }
 }
@@ -160,49 +158,50 @@ function setupAchievementModal() {
     closeBtn.addEventListener('click', () => {
       modal.classList.remove('active');
     });
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
   }
 }
 
 function setupBackupRestore() {
   const exportBtn = document.getElementById('export-data-btn');
-  const importFileInput = document.getElementById('import-file-input');
-  const resetBtn = document.getElementById('reset-data-btn');
+  const importInput = document.getElementById('import-file-input');
 
   if (exportBtn) {
     exportBtn.addEventListener('click', () => {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(Storage.exportData());
-      const dlAnchorElem = document.createElement('a');
-      dlAnchorElem.setAttribute("href", dataStr);
-      dlAnchorElem.setAttribute("download", `smoke_tracker_backup_${new Date().toISOString().slice(0, 10)}.json`);
-      dlAnchorElem.click();
+      const dataStr = Storage.exportData();
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `smokefree-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
   }
 
-  if (importFileInput) {
-    importFileInput.addEventListener('change', (e) => {
+  if (importInput) {
+    importInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (event) => {
-        const success = Storage.importData(event.target.result);
+      reader.onload = (evt) => {
+        const success = Storage.importData(evt.target.result);
         if (success) {
           alert('Podaci su uspešno uvezeni!');
           location.reload();
         } else {
-          alert('Greška pri uvozu fajla. Proveri format JSON fajla.');
+          alert('Greška pri učitavanju rezervne kopije. Proverite JSON fajl.');
         }
       };
       reader.readAsText(file);
-    });
-  }
-
-  if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      if (confirm('Da li si siguran da želiš da obrišeš sve podatke? Ova radnja se ne može poništiti.')) {
-        Storage.clearAllData();
-        location.reload();
-      }
     });
   }
 }
@@ -211,12 +210,12 @@ function setupPWA() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('ServiceWorker registered:', reg.scope))
-        .catch(err => console.log('ServiceWorker registration failed:', err));
+        .then(reg => console.log('SW registered:', reg.scope))
+        .catch(err => console.warn('SW failed:', err));
     });
   }
 
-  // Handle install prompt for Android
+  // PWA Install prompt handling
   let deferredPrompt;
   const installBanner = document.getElementById('pwa-install-banner');
   const installBtn = document.getElementById('pwa-install-btn');
@@ -224,17 +223,16 @@ function setupPWA() {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    if (installBanner) installBanner.style.display = 'flex';
+    if (installBanner) installBanner.classList.add('visible');
   });
 
   if (installBtn) {
     installBtn.addEventListener('click', async () => {
       if (!deferredPrompt) return;
+      installBanner.classList.remove('visible');
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        if (installBanner) installBanner.style.display = 'none';
-      }
+      console.log('User install outcome:', outcome);
       deferredPrompt = null;
     });
   }
