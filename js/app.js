@@ -28,8 +28,8 @@ function initApp() {
   // 5. Setup Achievement Modal Close
   setupAchievementModal();
 
-  // 6. Setup Data Export & Import
-  setupBackupRestore();
+  // 6. Setup Share App
+  setupShareApp();
 
   // 7. Register Service Worker & PWA Install
   setupPWA();
@@ -169,41 +169,56 @@ function setupAchievementModal() {
   }
 }
 
-function setupBackupRestore() {
-  const exportBtn = document.getElementById('export-data-btn');
-  const importInput = document.getElementById('import-file-input');
+function setupShareApp() {
+  const shareBtn = document.getElementById('share-app-btn');
+  const copyBtn = document.getElementById('copy-link-btn');
 
-  if (exportBtn) {
-    exportBtn.addEventListener('click', () => {
-      const dataStr = Storage.exportData();
-      const blob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `smokefree-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+  const shareData = {
+    title: 'Smoke Free — Aplikacija za prestanak pušenja',
+    text: 'Baci cigarete i prati svoj oporavak uz ovu besplatnu aplikaciju!',
+    url: window.location.href
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareData.url);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = shareData.url;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      Tracker.showToast('📋 Link je kopiran! Pošalji ga prijatelju.');
+      Sound.playClick();
+    } catch (e) {
+      Tracker.showToast('Kopiraj link: ' + shareData.url);
+    }
+  };
+
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async () => {
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            copyToClipboard();
+          }
+        }
+      } else {
+        copyToClipboard();
+      }
     });
   }
 
-  if (importInput) {
-    importInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const success = Storage.importData(evt.target.result);
-        if (success) {
-          alert('Podaci su uspešno uvezeni!');
-          location.reload();
-        } else {
-          alert('Greška pri učitavanju rezervne kopije. Proverite JSON fajl.');
-        }
-      };
-      reader.readAsText(file);
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      copyToClipboard();
     });
   }
 }

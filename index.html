@@ -250,16 +250,24 @@
           <div id="settings-save-success" class="save-alert">✓ Podešavanja uspešno sačuvana!</div>
         </form>
 
-        <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 10px;">
-          <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-secondary);">Rezervna kopija podataka</h3>
-          <button id="export-data-btn" class="action-btn-sm" style="width: 100%; justify-content: center; padding: 12px; background: #1e293b;">
-            💾 Preuzmi rezervnu kopiju (JSON)
-          </button>
-          
-          <label class="action-btn-sm" style="width: 100%; justify-content: center; padding: 12px; background: #182030; cursor: pointer; text-align: center;">
-            📂 Uvezi podatke iz fajla
-            <input type="file" id="import-file-input" accept=".json" style="display: none;">
-          </label>
+        <div class="share-app-card">
+          <div class="share-app-header">
+            <span class="share-app-icon">🤝</span>
+            <div>
+              <h3 class="share-app-title">Preporuči prijatelju</h3>
+              <p class="share-app-desc">
+                Pomozi nekom ko želi da ostavi cigarete — pošalji mu link ka aplikaciji.
+              </p>
+            </div>
+          </div>
+          <div class="share-btn-row">
+            <button type="button" id="share-app-btn" class="btn-share-primary">
+              📤 Podeli aplikaciju
+            </button>
+            <button type="button" id="copy-link-btn" class="btn-share-secondary" title="Kopiraj link">
+              📋 Kopiraj link
+            </button>
+          </div>
         </div>
 
         <div class="danger-zone">

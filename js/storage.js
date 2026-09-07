@@ -184,44 +184,6 @@ export const Storage = {
     return list;
   },
 
-  // Export / Import
-  exportData() {
-    return JSON.stringify({
-      version: 2,
-      exportDate: new Date().toISOString(),
-      quitTime: this.getQuitTime(),
-      settings: this.getSettings(),
-      unlockedBadges: this.getUnlockedBadges(),
-      wishlist: this.getWishlist(),
-      cravingsSurvived: this.getCravingsCount()
-    }, null, 2);
-  },
-
-  importData(jsonString) {
-    try {
-      const data = JSON.parse(jsonString);
-      if (data.quitTime) {
-        this.setQuitTime(data.quitTime);
-      }
-      if (data.settings) {
-        this.saveSettings(data.settings);
-      }
-      if (data.unlockedBadges) {
-        localStorage.setItem(STORAGE_KEYS.BADGES, JSON.stringify(data.unlockedBadges));
-      }
-      if (data.wishlist && Array.isArray(data.wishlist)) {
-        this.saveWishlist(data.wishlist);
-      }
-      if (typeof data.cravingsSurvived === 'number') {
-        localStorage.setItem(STORAGE_KEYS.CRAVINGS, data.cravingsSurvived.toString());
-      }
-      return true;
-    } catch (e) {
-      console.error('Import error', e);
-      return false;
-    }
-  },
-
   resetAllData() {
     localStorage.removeItem(STORAGE_KEYS.BADGES);
     localStorage.removeItem(STORAGE_KEYS.CRAVINGS);
