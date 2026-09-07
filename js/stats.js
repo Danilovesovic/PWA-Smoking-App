@@ -121,11 +121,11 @@ export const StatsView = {
     const monthSavedEl = document.getElementById('finance-month-rate');
     const yearSavedEl = document.getElementById('finance-year-rate');
 
-    if (totalSavedEl) totalSavedEl.textContent = `${Math.floor(savedMoney).toLocaleString()} ${settings.currency}`;
+    if (totalSavedEl) totalSavedEl.textContent = Storage.formatMoney(savedMoney);
     if (avoidedCigsEl) avoidedCigsEl.textContent = `${Math.floor(avoidedCigs).toLocaleString()}`;
-    if (daySavedEl) daySavedEl.textContent = `${Math.floor(dailyCost).toLocaleString()} ${settings.currency}`;
-    if (monthSavedEl) monthSavedEl.textContent = `${Math.floor(dailyCost * 30).toLocaleString()} ${settings.currency}`;
-    if (yearSavedEl) yearSavedEl.textContent = `${Math.floor(dailyCost * 365).toLocaleString()} ${settings.currency}`;
+    if (daySavedEl) daySavedEl.textContent = Storage.formatMoney(dailyCost);
+    if (monthSavedEl) monthSavedEl.textContent = Storage.formatMoney(dailyCost * 30);
+    if (yearSavedEl) yearSavedEl.textContent = Storage.formatMoney(dailyCost * 365);
 
     // Wishlist List
     const wishlistContainer = document.getElementById('wishlist-items-container');
@@ -159,7 +159,7 @@ export const StatsView = {
               <span class="wishlist-icon">${item.icon || '🎁'}</span>
               <div>
                 <h4 class="wishlist-title">${item.title}</h4>
-                <span class="wishlist-price">${item.price.toLocaleString()} ${settings.currency}</span>
+                <span class="wishlist-price">${Storage.formatMoney(item.price)}</span>
               </div>
             </div>
             <button class="delete-wish-btn" data-id="${item.id}" title="Ukloni sa liste">
@@ -179,7 +179,7 @@ export const StatsView = {
               <span class="wishlist-unlocked-tag">🎉 Možeš kupiti odmah!</span>
               <span class="wishlist-progress-pct">100%</span>
             ` : `
-              <span class="wishlist-days-left">Još ${Math.floor(remainingMoney).toLocaleString()} ${settings.currency} (~${daysLeft} ${daysLeft === 1 ? 'dan' : 'dana'})</span>
+              <span class="wishlist-days-left">Još ${Storage.formatMoney(remainingMoney)} (~${daysLeft} ${daysLeft === 1 ? 'dan' : 'dana'})</span>
               <span class="wishlist-progress-pct">${progressPercent}%</span>
             `}
           </div>

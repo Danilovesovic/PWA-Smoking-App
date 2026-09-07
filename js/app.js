@@ -113,9 +113,11 @@ function setupSettings() {
         }
       }
 
+      const cleanPrice = parseFloat(String(priceInput.value).replace(',', '.')) || 450;
+
       const updated = {
         dailyCigarettes: parseInt(dailyCigsInput.value, 10) || 20,
-        packPrice: parseFloat(priceInput.value) || 450,
+        packPrice: cleanPrice,
         currency: currencyInput.value.trim() || 'RSD',
         perPack: parseInt(perPackInput.value, 10) || 20,
         soundEnabled: soundToggle.checked,

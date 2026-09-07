@@ -88,8 +88,24 @@ export const Storage = {
   getSavedMoney() {
     const avoided = this.getCigarettesAvoided();
     const settings = this.getSettings();
-    const pricePerCig = (settings.packPrice || 450) / (settings.perPack || 20);
+    const packPrice = parseFloat(settings.packPrice) || 450;
+    const perPack = parseInt(settings.perPack, 10) || 20;
+    const pricePerCig = packPrice / perPack;
     return avoided * pricePerCig;
+  },
+
+  // Format money smartly based on currency and decimal values
+  formatMoney(amount, currencyOverride = null) {
+    const settings = this.getSettings();
+    const currency = currencyOverride || settings.currency || 'RSD';
+    const num = Number(amount) || 0;
+    const isDecimal = ['BAM', 'EUR', 'USD', 'CHF', 'GBP', 'KM'].includes(currency.toUpperCase()) ||
+                      (num % 1 !== 0);
+
+    if (isDecimal) {
+      return `${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+    }
+    return `${Math.floor(num).toLocaleString()} ${currency}`;
   },
 
   // Calculate life regained in minutes (~11 minutes saved per avoided cigarette)

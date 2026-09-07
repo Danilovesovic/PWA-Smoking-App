@@ -211,7 +211,7 @@ export const Tracker = {
     const savedMoney = Storage.getSavedMoney();
     const savedMoneyEl = document.getElementById('dash-saved-money');
     if (savedMoneyEl) {
-      savedMoneyEl.textContent = `${Math.floor(savedMoney).toLocaleString()} ${settings.currency}`;
+      savedMoneyEl.textContent = Storage.formatMoney(savedMoney);
     }
 
     // Cigarettes Avoided

@@ -174,7 +174,7 @@
               <input type="text" id="wish-title-input" class="setting-input wish-title-input" placeholder="Naziv cilja (npr. Nove patike)" required>
             </div>
             <div class="wish-form-row">
-              <input type="number" id="wish-price-input" class="setting-input wish-price-input" placeholder="Cena cilja" min="1" step="1" required>
+              <input type="number" id="wish-price-input" class="setting-input wish-price-input" placeholder="Cena cilja" min="0.01" step="0.01" required>
               <button type="submit" class="btn-add-wish">+ Dodaj cilj</button>
             </div>
           </form>
@@ -211,7 +211,7 @@
 
           <div class="setting-group">
             <label class="setting-label" for="setting-pack-price">Cena jedne paklice</label>
-            <input type="number" id="setting-pack-price" class="setting-input" step="1" min="1" required>
+            <input type="number" id="setting-pack-price" class="setting-input" step="0.01" min="0.01" placeholder="npr. 7.30 ili 450" required>
           </div>
 
           <div class="setting-group">
