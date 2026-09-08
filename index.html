@@ -24,6 +24,12 @@
     <button id="pwa-install-btn" class="pwa-banner-btn">Instaliraj</button>
   </div>
 
+  <!-- PWA Update Available Banner -->
+  <div id="pwa-update-banner" class="pwa-banner pwa-update-banner">
+    <span>✨ Nova verzija je spremna!</span>
+    <button id="pwa-update-btn" class="pwa-banner-btn">Osveži odmah</button>
+  </div>
+
   <div class="app-container">
     
     <!-- Top Header -->
@@ -268,6 +274,22 @@
               📋 Kopiraj link
             </button>
           </div>
+        </div>
+
+        <div class="app-info-card">
+          <div class="app-info-header">
+            <span class="app-info-icon">⚡</span>
+            <div>
+              <h3 class="app-info-title">Ažuriranje & Keš memorija</h3>
+              <p class="app-info-desc">
+                PWA Verzija: <strong id="app-version-tag">v5.0</strong> • Ako si poslao (push) izmene sa računara, klikni dole da odmah očistiš keš na telefonu.
+              </p>
+            </div>
+          </div>
+          <button type="button" id="force-update-btn" class="btn-refresh-app">
+            🔄 Osveži aplikaciju i povuci novi kod
+          </button>
+          <div id="app-update-status" class="update-status-msg"></div>
         </div>
 
         <div class="danger-zone">

@@ -224,11 +224,106 @@ function setupShareApp() {
 }
 
 function setupPWA() {
+  let swRegistration = null;
+  let refreshing = false;
+
+  const updateBanner = document.getElementById('pwa-update-banner');
+  const updateBtn = document.getElementById('pwa-update-btn');
+  const forceUpdateBtn = document.getElementById('force-update-btn');
+  const updateStatusMsg = document.getElementById('app-update-status');
+
+  const showUpdatePrompt = (worker) => {
+    if (updateBanner) {
+      updateBanner.classList.add('visible');
+    }
+    if (updateBtn) {
+      updateBtn.onclick = () => {
+        updateBanner.classList.remove('visible');
+        if (worker) {
+          worker.postMessage({ type: 'SKIP_WAITING' });
+        }
+      };
+    }
+  };
+
   if ('serviceWorker' in navigator) {
+    // Reload page when new Service Worker takes over
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('SW registered:', reg.scope))
+        .then((reg) => {
+          swRegistration = reg;
+          console.log('SW registered:', reg.scope);
+
+          // Check for updates on startup
+          reg.update().catch(() => {});
+
+          // If a new worker is already waiting to activate
+          if (reg.waiting) {
+            showUpdatePrompt(reg.waiting);
+          }
+
+          // Listen for new worker installed in background
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdatePrompt(newWorker);
+              }
+            });
+          });
+        })
         .catch(err => console.warn('SW failed:', err));
+    });
+
+    // Check for updates whenever user returns to the app / unlocks phone
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && swRegistration) {
+        swRegistration.update().catch(() => {});
+      }
+    });
+  }
+
+  // Force Update & Clear Cache Button (in Settings)
+  if (forceUpdateBtn) {
+    forceUpdateBtn.addEventListener('click', async () => {
+      forceUpdateBtn.disabled = true;
+      forceUpdateBtn.textContent = '⏳ Čišćenje keša i osvežavanje...';
+
+      if (updateStatusMsg) {
+        updateStatusMsg.textContent = 'Preuzimanje najnovijeg koda sa servera...';
+        updateStatusMsg.classList.add('visible');
+      }
+
+      try {
+        // 1. Delete all browser caches
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+
+        // 2. Unregister or update SW
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let registration of registrations) {
+            await registration.update().catch(() => {});
+          }
+        }
+      } catch (e) {
+        console.warn('Cache clearing error:', e);
+      }
+
+      // 3. Hard reload the page
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     });
   }
 

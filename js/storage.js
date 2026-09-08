@@ -184,6 +184,13 @@ export const Storage = {
     return list;
   },
 
+  resetRelapse() {
+    localStorage.removeItem(STORAGE_KEYS.BADGES);
+    localStorage.removeItem(STORAGE_KEYS.CRAVINGS);
+    localStorage.removeItem('st_smoke_logs');
+    this.setQuitTime(Date.now());
+  },
+
   resetAllData() {
     localStorage.removeItem(STORAGE_KEYS.BADGES);
     localStorage.removeItem(STORAGE_KEYS.CRAVINGS);

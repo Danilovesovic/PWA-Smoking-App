@@ -375,7 +375,7 @@ export const Tracker = {
   },
 
   resetTimerToNow() {
-    Storage.setQuitTime(Date.now());
+    Storage.resetRelapse();
     const settings = Storage.getSettings();
     if (settings.soundEnabled) Sound.playUndo();
     if (settings.hapticEnabled) Sound.triggerHaptic('undo');
@@ -383,7 +383,7 @@ export const Tracker = {
     this.closeResetModal();
     this.updateUI();
     window.dispatchEvent(new CustomEvent('stats_updated'));
-    this.showToast('Tajmer je resetovan na ovaj trenutak. Glavu gore, nova pobeda počinje sad!');
+    this.showToast('Tajmer i napredak su resetovani. Glavu gore, nova pobeda kreće od nule!');
   },
 
   // ================= DATE PICKER WORKFLOW =================
